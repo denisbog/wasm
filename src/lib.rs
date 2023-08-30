@@ -169,11 +169,14 @@ fn render_gl() -> Result<(), JsValue> {
         WebGl2RenderingContext::VERTEX_SHADER,
         r##"#version 300 es
  
-        in vec4 position;
+        in vec3 position;
+        in vec3 color;
+
+        out vec3 outColor;
 
         void main() {
-        
-            gl_Position = position;
+            gl_Position = vec4(position, 1);
+            outColor = color;
         }
         "##,
     )?;
@@ -184,10 +187,11 @@ fn render_gl() -> Result<(), JsValue> {
         r##"#version 300 es
     
         precision highp float;
-        out vec4 outColor;
+        in vec3 outColor;
+        out vec4 diffuseColor;
         
         void main() {
-            outColor = vec4(1, 1, 1, 1);
+            diffuseColor = vec4(outColor, 1);
         }
         "##,
     )?;
@@ -198,11 +202,10 @@ fn render_gl() -> Result<(), JsValue> {
     let buffer = context.create_buffer().ok_or("Failed to create buffer")?;
     context.bind_buffer(WebGl2RenderingContext::ARRAY_BUFFER, Some(&buffer));
 
-    let vao = context
-        .create_vertex_array()
-        .ok_or("Could not create vertex array object")?;
-    context.bind_vertex_array(Some(&vao));
-
+    // let vao = context
+    //     .create_vertex_array()
+    //     .ok_or("Could not create vertex array object")?;
+    // context.bind_vertex_array(Some(&vao));
     context.vertex_attrib_pointer_with_i32(
         position_attribute_location as u32,
         3,
@@ -212,9 +215,26 @@ fn render_gl() -> Result<(), JsValue> {
         0,
     );
     context.enable_vertex_attrib_array(position_attribute_location as u32);
+    // context.bind_vertex_array(Some(&vao));
 
-    context.bind_vertex_array(Some(&vao));
-
+    // let color_attribute_location = context.get_attrib_location(&program, "color");
+    // let buffer = context.create_buffer().ok_or("Failed to create buffer")?;
+    // context.bind_buffer(WebGl2RenderingContext::ARRAY_BUFFER, Some(&buffer));
+    //
+    // let vao = context
+    //     .create_vertex_array()
+    //     .ok_or("Could not create vertex array object")?;
+    // context.bind_vertex_array(Some(&vao));
+    // context.vertex_attrib_pointer_with_i32(
+    //     color_attribute_location as u32,
+    //     3,
+    //     WebGl2RenderingContext::FLOAT,
+    //     false,
+    //     0,
+    //     12,
+    // );
+    // context.enable_vertex_attrib_array(color_attribute_location as u32);
+    // context.bind_vertex_array(Some(&vao));
     Ok(())
 }
 
@@ -236,7 +256,8 @@ pub fn draw_universe(universe: &Universe) -> Result<(), JsValue> {
 }
 
 fn draw(universe: &Universe, context: &WebGl2RenderingContext) {
-    context.clear_color(0.0, 0.0, 0.0, 1.0);
+    context.clear_color(1.0, 1.0, 1.0, 1.0);
+    // draw_grid(universe, context);
     context.clear(WebGl2RenderingContext::COLOR_BUFFER_BIT);
     let size = 2f32 / universe.height() as f32;
     for row in 0..universe.height() {
@@ -250,14 +271,26 @@ fn draw(universe: &Universe, context: &WebGl2RenderingContext) {
                     offset_x + 0.0,
                     offset_y + 0.0,
                     0.0,
+                    0.0,
+                    0.0,
+                    0.0,
                     offset_x + 0.0,
                     offset_y + size,
                     0.0,
+                    0.0,
+                    0.0,
+                    0.0,
                     offset_x + size,
                     offset_y + size,
                     0.0,
+                    0.0,
+                    0.0,
+                    0.0,
                     offset_x + size,
                     offset_y + 0.0,
+                    0.0,
+                    0.0,
+                    0.0,
                     0.0,
                 ];
                 draw_square(context, &vertices);
@@ -265,6 +298,42 @@ fn draw(universe: &Universe, context: &WebGl2RenderingContext) {
         }
     }
 }
+
+// fn draw_grid(universe: &Universe, context: &WebGl2RenderingContext) {
+//     let size = 2f32;
+//     for row in 0..universe.height() {
+//         for col in 0..universe.width() {
+//             let idx = universe.get_index(row, col);
+//             let cell = universe.cells[idx];
+//             let offset_x = col as f32 * size - 1f32;
+//             let offset_y = row as f32 * size - 1f32;
+//             if cell == Cell::Alive {
+//                 let vertices = [
+//                     offset_x + 0.0,
+//                     offset_y + 0.0,
+//                     0.0,
+//                     offset_x + 0.0,
+//                     offset_y + size,
+//                     0.0,
+//                 ];
+//                 draw_line(context, &vertices);
+//             }
+//         }
+//     }
+// }
+//
+// fn draw_line(context: &WebGl2RenderingContext, vertices: &[f32]) {
+//     unsafe {
+//         let positions_array_buf_view = js_sys::Float32Array::view(vertices);
+//         context.buffer_data_with_array_buffer_view(
+//             WebGl2RenderingContext::ARRAY_BUFFER,
+//             &positions_array_buf_view,
+//             WebGl2RenderingContext::STATIC_DRAW,
+//         );
+//     }
+//     let vert_count = (vertices.len() / 6) as i32;
+//     context.draw_arrays(WebGl2RenderingContext::LINES, 0, vert_count);
+// }
 
 fn draw_square(context: &WebGl2RenderingContext, vertices: &[f32]) {
     unsafe {
@@ -275,7 +344,7 @@ fn draw_square(context: &WebGl2RenderingContext, vertices: &[f32]) {
             WebGl2RenderingContext::STATIC_DRAW,
         );
     }
-    let vert_count = (vertices.len() / 3) as i32;
+    let vert_count = (vertices.len() / 6) as i32;
     context.draw_arrays(WebGl2RenderingContext::TRIANGLE_FAN, 0, vert_count);
 }
 
