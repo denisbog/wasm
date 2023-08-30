@@ -136,6 +136,15 @@ impl fmt::Display for Universe {
         Ok(())
     }
 }
+
+#[wasm_bindgen(start)]
+fn start() -> Result<(), JsValue> {
+    let document = web_sys::window().unwrap().document().unwrap();
+    let info = document.get_element_by_id("info").unwrap();
+    info.set_inner_html("message");
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
