@@ -163,19 +163,21 @@ fn render_gl() -> Result<(), JsValue> {
         .get_context("webgl2")?
         .unwrap()
         .dyn_into::<WebGl2RenderingContext>()?;
-
+    context.viewport(0, 0, dim.try_into().unwrap(), dim.try_into().unwrap());
     let vert_shader = compile_shader(
         &context,
         WebGl2RenderingContext::VERTEX_SHADER,
         r##"#version 300 es
  
-        in vec3 position;
-        in vec3 color;
+        in vec2 position;
+        in float color;
+        uniform mat4 scale;
+        uniform mat4 translate;
 
-        out vec3 outColor;
+        out float outColor;
 
         void main() {
-            gl_Position = vec4(position, 1);
+            gl_Position = translate * scale * vec4(position, 0, 1);
             outColor = color;
         }
         "##,
@@ -187,11 +189,11 @@ fn render_gl() -> Result<(), JsValue> {
         r##"#version 300 es
     
         precision highp float;
-        in vec3 outColor;
+        in float outColor;
         out vec4 diffuseColor;
         
         void main() {
-            diffuseColor = vec4(outColor, 1);
+            diffuseColor = vec4(outColor, outColor, outColor, 1);
         }
         "##,
     )?;
@@ -208,10 +210,10 @@ fn render_gl() -> Result<(), JsValue> {
     context.bind_vertex_array(Some(&vao));
     context.vertex_attrib_pointer_with_i32(
         position_attribute_location as u32,
-        3,
+        2,
         WebGl2RenderingContext::FLOAT,
         false,
-        24,
+        12,
         0,
     );
     context.enable_vertex_attrib_array(position_attribute_location as u32);
@@ -219,13 +221,63 @@ fn render_gl() -> Result<(), JsValue> {
     let color_attribute_location = context.get_attrib_location(&program, "color");
     context.vertex_attrib_pointer_with_i32(
         color_attribute_location as u32,
-        3,
+        1,
         WebGl2RenderingContext::FLOAT,
         false,
-        24,
         12,
+        8,
     );
     context.enable_vertex_attrib_array(color_attribute_location as u32);
+
+    let scale_attribute_location = context.get_uniform_location(&program, "scale");
+    let scale = 64f32 / 2f32;
+    context.uniform_matrix4fv_with_f32_array(
+        scale_attribute_location.as_ref(),
+        false,
+        &[
+            1f32 / scale,
+            0f32,
+            0f32,
+            0f32,
+            0f32,
+            1f32 / scale,
+            0f32,
+            0f32,
+            0f32,
+            0f32,
+            1f32,
+            0f32,
+            0f32,
+            0f32,
+            0f32,
+            1f32,
+        ],
+    );
+
+    let translate_attribute_location = context.get_uniform_location(&program, "translate");
+    let translate = -0.2f32;
+    context.uniform_matrix4fv_with_f32_array(
+        translate_attribute_location.as_ref(),
+        false,
+        &[
+            1f32,
+            0f32,
+            0f32,
+            0f32 + translate,
+            0f32,
+            1f32,
+            0f32,
+            0f32 + translate,
+            0f32,
+            0f32,
+            1f32,
+            0f32 + translate,
+            0f32,
+            0f32,
+            0f32,
+            1f32,
+        ],
+    );
     Ok(())
 }
 
@@ -250,40 +302,29 @@ fn draw(universe: &Universe, context: &WebGl2RenderingContext) {
     context.clear_color(1.0, 1.0, 1.0, 1.0);
     context.clear(WebGl2RenderingContext::COLOR_BUFFER_BIT);
     draw_grid(universe, context);
-    let size = 2f32 / universe.height() as f32;
+    // let size = 2f32 / universe.height() as f32;
+    let size = 1f32;
 
     let gray = 0.1f32;
     for row in 0..universe.height() {
         for col in 0..universe.width() {
             let idx = universe.get_index(row, col);
             let cell = universe.cells[idx];
-            let offset_x = col as f32 * size - 1f32;
-            let offset_y = row as f32 * size - 1f32;
+            let offset_x = col as f32 * size;
+            let offset_y = row as f32 * size;
             if cell == Cell::Alive {
                 let vertices = [
                     offset_x + 0.0,
                     offset_y + 0.0,
-                    0.0,
-                    gray,
-                    gray,
                     gray,
                     offset_x + 0.0,
                     offset_y + size,
-                    0.0,
-                    gray,
-                    gray,
                     gray,
                     offset_x + size,
                     offset_y + size,
-                    0.0,
-                    gray,
-                    gray,
                     gray,
                     offset_x + size,
                     offset_y + 0.0,
-                    0.0,
-                    gray,
-                    gray,
                     gray,
                 ];
                 draw_square(context, &vertices);
@@ -293,36 +334,25 @@ fn draw(universe: &Universe, context: &WebGl2RenderingContext) {
 }
 
 fn draw_grid(universe: &Universe, context: &WebGl2RenderingContext) {
-    let size = 2f32 / universe.height() as f32;
+    // let size = 2f32 / universe.height() as f32;
+    let size = universe.height() as f32;
     let gray = 0.6f32;
     for row in 0..universe.height() {
         for col in 0..universe.width() {
-            let offset_x = (col) as f32 * size - 1f32;
-            let offset_y = (row) as f32 * size - 1f32;
+            let offset_x = (col) as f32;
+            let offset_y = (row) as f32;
             let vertices = [
                 offset_x + 0.0,
                 offset_y + 0.0,
-                0.0,
-                gray,
-                gray,
                 gray,
                 offset_x + 0.0,
                 offset_y + size,
-                0.0,
-                gray,
-                gray,
                 gray,
                 offset_x + 0.0,
                 offset_y + 0.0,
-                0.0,
-                gray,
-                gray,
                 gray,
                 offset_x + size,
                 offset_y + 0.0,
-                0.0,
-                gray,
-                gray,
                 gray,
             ];
             draw_line(context, &vertices);
@@ -339,7 +369,7 @@ fn draw_line(context: &WebGl2RenderingContext, vertices: &[f32]) {
             WebGl2RenderingContext::STATIC_DRAW,
         );
     }
-    let vert_count = (vertices.len() / 6) as i32;
+    let vert_count = (vertices.len() / 3) as i32;
     context.draw_arrays(WebGl2RenderingContext::LINES, 0, vert_count);
 }
 
@@ -352,7 +382,7 @@ fn draw_square(context: &WebGl2RenderingContext, vertices: &[f32]) {
             WebGl2RenderingContext::STATIC_DRAW,
         );
     }
-    let vert_count = (vertices.len() / 6) as i32;
+    let vert_count = (vertices.len() / 3) as i32;
     context.draw_arrays(WebGl2RenderingContext::TRIANGLE_FAN, 0, vert_count);
 }
 

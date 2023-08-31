@@ -24,4 +24,5 @@ features = [
   'WebGlShader',
   'Window',
   'console',
+  'WebGlUniformLocation',
 ]
