@@ -27,8 +27,10 @@
     <div id="info"></div>
     <div id="fps"></div>
     <button id="play-pause"></button>
-    <canvas id="gl"></canvas>
-    <canvas id="game-of-life-canvas"></canvas>
+    <div>
+      <canvas id="gl"></canvas>
+      <canvas id="game-of-life-canvas"></canvas>
+    </div>
     <script type="module">
       import init, { greet, Universe, Cell, draw_universe} from "./pkg/hello_wasm.js";
       const CELL_SIZE = 5; // px

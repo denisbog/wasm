@@ -142,7 +142,7 @@ impl fmt::Display for Universe {
 pub fn start() -> Result<(), JsValue> {
     let document = web_sys::window().unwrap().document().unwrap();
     let info = document.get_element_by_id("info").unwrap();
-    info.set_inner_html("message");
+    info.set_inner_html("Message set from RUST");
     Ok(())
 }
 
@@ -150,6 +150,7 @@ use web_sys::{WebGl2RenderingContext, WebGlProgram, WebGlShader};
 
 #[wasm_bindgen(start)]
 fn render_gl() -> Result<(), JsValue> {
+    start()?;
     let document = web_sys::window().unwrap().document().unwrap();
     let canvas = document.get_element_by_id("gl").unwrap();
     let canvas: web_sys::HtmlCanvasElement = canvas.dyn_into::<web_sys::HtmlCanvasElement>()?;
